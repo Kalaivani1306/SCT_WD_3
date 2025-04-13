@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tic Tac Toe - Unbeatable AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e2f;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .game-mode {
+      margin-bottom: 20px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+    }
+
+    .cell {
+      background-color: #292949;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+
+    .cell:hover {
+      background-color: #3e3e6b;
+    }
+
+    .status {
+      margin-top: 15px;
+      font-size: 1.2rem;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tic Tac Toe</h1>
+
+  <div class="game-mode">
+    <label>
+      <input type="checkbox" id="vsComputer" />
+      Play vs Computer (Unbeatable AI)
+    </label>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="status" id="status">Player X's Turn</div>
+  <button onclick="restartGame()">Restart Game</button>
+
+  <script>
+    const board = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const vsComputer = document.getElementById('vsComputer');
+
+    let cells = [];
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let gameBoard = ["", "", "", "", "", "", "", "", ""];
+
+    const winCombos = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function createBoard() {
+      board.innerHTML = '';
+      gameBoard = ["", "", "", "", "", "", "", "", ""];
+      gameActive = true;
+      currentPlayer = 'X';
+      updateStatus();
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', handleCellClick);
+        cells[i] = cell;
+        board.appendChild(cell);
+      }
+    }
+
+    function handleCellClick(e) {
+      const index = e.target.dataset.index;
+      if (gameBoard[index] || !gameActive) return;
+
+      makeMove(index, currentPlayer);
+
+      if (checkWin(gameBoard, currentPlayer)) {
+        statusEl.textContent = `🎉 Player ${currentPlayer} Wins!`;
+        gameActive = false;
+        return;
+      }
+
+      if (gameBoard.every(cell => cell)) {
+        statusEl.textContent = "It's a Tie!";
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      updateStatus();
+
+      if (vsComputer.checked && currentPlayer === 'O' && gameActive) {
+        setTimeout(() => {
+          const bestMove = getBestMove(gameBoard);
+          makeMove(bestMove, 'O');
+
+          if (checkWin(gameBoard, 'O')) {
+            statusEl.textContent = `🤖 Computer Wins!`;
+            gameActive = false;
+            return;
+          }
+
+          if (gameBoard.every(cell => cell)) {
+            statusEl.textContent = "It's a Tie!";
+            gameActive = false;
+            return;
+          }
+
+          currentPlayer = 'X';
+          updateStatus();
+        }, 500);
+      }
+    }
+
+    function makeMove(index, player) {
+      gameBoard[index] = player;
+      cells[index].textContent = player;
+    }
+
+    function checkWin(board, player) {
+      return winCombos.some(combo => {
+        const [a, b, c] = combo;
+        return board[a] === player && board[b] === player && board[c] === player;
+      });
+    }
+
+    function getBestMove(board) {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === "") {
+          board[i] = 'O';
+          let score = minimax(board, 0, false);
+          board[i] = "";
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      return move;
+    }
+
+    function minimax(board, depth, isMaximizing) {
+      if (checkWin(board, 'O')) return 10 - depth;
+      if (checkWin(board, 'X')) return depth - 10;
+      if (board.every(cell => cell)) return 0;
+
+      if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === "") {
+            board[i] = 'O';
+            let eval = minimax(board, depth + 1, false);
+            board[i] = "";
+            maxEval = Math.max(maxEval, eval);
+          }
+        }
+        return maxEval;
+      } else {
+        let minEval = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === "") {
+            board[i] = 'X';
+            let eval = minimax(board, depth + 1, true);
+            board[i] = "";
+            minEval = Math.min(minEval, eval);
+          }
+        }
+        return minEval;
+      }
+    }
+
+    function updateStatus() {
+      statusEl.textContent = `Player ${currentPlayer}'s Turn`;
+    }
+
+    function restartGame() {
+      createBoard();
+    }
+
+    createBoard();
+  </script>
+
+</body>
+</html>
